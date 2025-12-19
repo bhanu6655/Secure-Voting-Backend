@@ -7,9 +7,9 @@ const db = require("./db");
 const app = express();
 app.use(express.json());
 
-// ==========================
+
 // AUTH MIDDLEWARE
-// ==========================
+
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader)
@@ -35,9 +35,9 @@ const authenticateCandidate = (req, res, next) => {
   });
 };
 
-// ==========================
+
 // VOTER AUTH
-// ==========================
+
 app.post("/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
   const hashed = await bcrypt.hash(password, 10);
@@ -79,9 +79,9 @@ app.post("/auth/login", (req, res) => {
   );
 });
 
-// ==========================
+
 // CANDIDATE AUTH
-// ==========================
+
 app.post("/candidates/register", async (req, res) => {
   const { name, email, party, password } = req.body;
   const hashed = await bcrypt.hash(password, 10);
@@ -124,9 +124,9 @@ app.post("/candidates/login", (req, res) => {
   );
 });
 
-// ==========================
+
 // VOTING (SAFE & ATOMIC)
-// ==========================
+
 app.post("/vote/:candidateId", authenticate, (req, res) => {
   if (req.user.role !== "voter")
     return res.status(403).json({ message: "Only voters can vote" });
@@ -180,9 +180,8 @@ app.post("/vote/:candidateId", authenticate, (req, res) => {
   );
 });
 
-// ==========================
 // VIEW CANDIDATES (VOTERS ONLY)
-// ==========================
+
 app.get("/candidates", authenticate, (req, res) => {
   if (req.user.role !== "voter")
     return res.status(403).json({ message: "Only voters allowed" });
@@ -196,9 +195,9 @@ app.get("/candidates", authenticate, (req, res) => {
   );
 });
 
-// ==========================
+
 // CANDIDATE VIEW OWN VOTES
-// ==========================
+
 app.get(
   "/candidates/me/votes",
   authenticateCandidate,
@@ -217,9 +216,9 @@ app.get(
   }
 );
 
-// ==========================
+
 // SERVER START
-// ==========================
+
 app.listen(3000, () =>
   console.log("Server running on http://localhost:3000")
 );
