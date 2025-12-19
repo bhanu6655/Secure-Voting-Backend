@@ -19,5 +19,40 @@ Content-Type: application/json
 
 ####
 
-POST http://localhost:3000/vote/vote/1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2b3Rlcl9pZCI6MSwiaWF0IjoxNzY2MTM2MzY1LCJleHAiOjE3NjYxMzk5NjV9.BmIdVHNFnU08U_WbaLd0idwTxdK9UjbQ2tZ5NjNjOwc
+POST http://localhost:3000/candidates/register
+Content-Type: application/json
+
+{
+  "name": "Candidate A",
+  "email": "candidateA@gmail.com",
+  "party": "Party X",
+  "password": "candidate123"
+}
+
+
+####
+POST http://localhost:3000/candidates/login
+Content-Type: application/json
+
+{
+  "email": "candidateA@gmail.com",
+  "password": "candidate123"
+}
+
+####
+GET http://localhost:3000/candidates
+Authorization: Bearer {{voterToken}}
+
+####
+POST http://localhost:3000/vote/1
+Authorization: Bearer {{voterToken}}
+
+
+####
+POST http://localhost:3000/vote/1
+Authorization: Bearer {{voterToken}}
+
+
+####
+GET http://localhost:3000/candidates/me/votes
+Authorization: Bearer {{candidateToken}}
