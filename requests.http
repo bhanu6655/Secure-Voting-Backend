@@ -1,0 +1,23 @@
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "name": "Bhanu",
+  "email": "bhanu@gmail.com",
+  "password": "password123"
+}
+
+#####
+
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "bhanu@gmail.com",
+  "password": "password123"
+}
+
+####
+
+POST http://localhost:3000/vote/vote/1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2b3Rlcl9pZCI6MSwiaWF0IjoxNzY2MTM2MzY1LCJleHAiOjE3NjYxMzk5NjV9.BmIdVHNFnU08U_WbaLd0idwTxdK9UjbQ2tZ5NjNjOwc
