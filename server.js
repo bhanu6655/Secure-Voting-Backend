@@ -212,6 +212,7 @@ app.get(
 );
 
 
+<<<<<<< HEAD
 app.get("/admin/votes", authenticateAdmin, (req, res) => {
   db.all(
     `
@@ -229,6 +230,9 @@ app.get("/admin/votes", authenticateAdmin, (req, res) => {
 
 
 
+=======
+// SERVER START
+>>>>>>> 26179abc58595151b8186a2745c7ed89939104a6
 
 app.listen(3000, () =>
   console.log("Server running on http://localhost:3000")
