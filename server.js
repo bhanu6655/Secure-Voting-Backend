@@ -220,16 +220,26 @@ app.get("/candidates", authenticate, async (req, res) => {
    CANDIDATE VIEW OWN VOTES
 ======================= */
 
-app.get("/candidates/me/votes", authenticateCandidate, async (req, res) => {
-  const candidateId = req.user.candidate_id;
+app.get("/candidates", authenticate, async (req, res) => {
+  if (req.user.role !== "voter") {
+    return res.status(403).json({ message: "Only voters allowed" });
+  }
 
-  const candidate = await db.get(
-    "SELECT candidate_id, name, party, votes FROM candidates WHERE candidate_id = ?",
-    [candidateId]
-  );
+  const candidates = await db.all(`
+    SELECT
+      c.candidate_id,
+      c.name,
+      c.party,
+      COUNT(v.vote_id) AS votes
+    FROM candidates c
+    LEFT JOIN votes v
+      ON c.candidate_id = v.candidate_id
+    GROUP BY c.candidate_id
+  `);
 
-  res.json(candidate);
+  res.json(candidates);
 });
+
 
 /* =======================
    ADMIN VIEW ALL VOTES
