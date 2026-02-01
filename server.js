@@ -7,13 +7,15 @@ const db = require("./db");
 const app = express();
 app.use(express.json());
 
-
-// AUTH MIDDLEWARE
+/* =======================
+   AUTH MIDDLEWARE
+======================= */
 
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader)
+  if (!authHeader) {
     return res.status(401).json({ message: "Authorization missing" });
+  }
 
   const token = authHeader.split(" ")[1];
 
@@ -26,50 +28,14 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// admin 
-
-app.post("/admin/login", (req, res) => {
-  const { username, password } = req.body;
-
-  db.get(
-    "SELECT * FROM admins WHERE username = ?",
-    [username],
-    async (err, admin) => {
-      if (err) {
-        return res.status(500).json({ message: "Database error" });
-      }
-
-      if (!admin) {
-        return res.status(401).json({ message: "Invalid admin credentials" });
-      }
-
-      const isMatch = await bcrypt.compare(password, admin.password);
-      if (!isMatch) {
-        return res.status(401).json({ message: "Invalid admin credentials" });
-      }
-
-      const token = jwt.sign(
-        { admin_id: admin.admin_id, role: "admin" },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-
-      return res.json({ token });
-    }
-  );
-});
-
-//
-
 const authenticateAdmin = (req, res, next) => {
   authenticate(req, res, () => {
-    if (req.user.role !== "admin")
+    if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Admin access only" });
+    }
     next();
   });
 };
-
-
 
 const authenticateCandidate = (req, res, next) => {
   authenticate(req, res, () => {
@@ -80,100 +46,131 @@ const authenticateCandidate = (req, res, next) => {
   });
 };
 
+/* =======================
+   ADMIN AUTH
+======================= */
 
-// VOTER AUTH
+app.post("/admin/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  const admin = await db.get(
+    "SELECT * FROM admins WHERE username = ?",
+    [username]
+  );
+
+  if (!admin) {
+    return res.status(401).json({ message: "Invalid admin credentials" });
+  }
+
+  const match = await bcrypt.compare(password, admin.password);
+  if (!match) {
+    return res.status(401).json({ message: "Invalid admin credentials" });
+  }
+
+  const token = jwt.sign(
+    { admin_id: admin.admin_id, role: "admin" },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  res.json({ token });
+});
+
+/* =======================
+   VOTER AUTH
+======================= */
 
 app.post("/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
   const hashed = await bcrypt.hash(password, 10);
 
-  db.run(
-    `INSERT INTO voters (name, email, password) VALUES (?, ?, ?)`,
-    [name, email, hashed],
-    (err) => {
-      if (err)
-        return res.status(400).json({ message: "Voter already exists" });
-      res.json({ message: "Voter registered" });
-    }
-  );
+  try {
+    await db.run(
+      "INSERT INTO voters (name, email, password) VALUES (?, ?, ?)",
+      [name, email, hashed]
+    );
+    res.json({ message: "Voter registered" });
+  } catch {
+    res.status(400).json({ message: "Voter already exists" });
+  }
 });
 
-
-app.post("/auth/login", (req, res) => {
+app.post("/auth/login", async (req, res) => {
   const { email, password } = req.body;
 
-  db.get(
-    `SELECT * FROM voters WHERE email = ?`,
-    [email],
-    async (err, voter) => {
-      if (err) return res.status(500).json({ message: "DB error" });
-      if (!voter)
-        return res.status(400).json({ message: "Invalid credentials" });
-
-      const match = await bcrypt.compare(password, voter.password);
-      if (!match)
-        return res.status(400).json({ message: "Invalid credentials" });
-
-      const token = jwt.sign(
-        { voter_id: voter.voter_id, role: "voter" },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-
-      res.json({ token });
-    }
+  const voter = await db.get(
+    "SELECT * FROM voters WHERE email = ?",
+    [email]
   );
+
+  if (!voter) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
+
+  const match = await bcrypt.compare(password, voter.password);
+  if (!match) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
+
+  const token = jwt.sign(
+    { voter_id: voter.voter_id, role: "voter" },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  res.json({ token });
 });
 
-
-// CANDIDATE AUTH
+/* =======================
+   CANDIDATE AUTH
+======================= */
 
 app.post("/candidates/register", async (req, res) => {
   const { name, email, party, password } = req.body;
   const hashed = await bcrypt.hash(password, 10);
 
-  db.run(
-    `INSERT INTO candidates (name, email, party, password)
-     VALUES (?, ?, ?, ?)`,
-    [name, email, party, hashed],
-    (err) => {
-      if (err)
-        return res.status(400).json({ message: "Candidate already exists" });
-      res.json({ message: "Candidate registered" });
-    }
-  );
+  try {
+    await db.run(
+      "INSERT INTO candidates (name, email, party, password) VALUES (?, ?, ?, ?)",
+      [name, email, party, hashed]
+    );
+    res.json({ message: "Candidate registered" });
+  } catch {
+    res.status(400).json({ message: "Candidate already exists" });
+  }
 });
 
-app.post("/candidates/login", (req, res) => {
+app.post("/candidates/login", async (req, res) => {
   const { email, password } = req.body;
 
-  db.get(
-    `SELECT * FROM candidates WHERE email = ?`,
-    [email],
-    async (err, candidate) => {
-      if (err) return res.status(500).json({ message: "DB error" });
-      if (!candidate)
-        return res.status(400).json({ message: "Invalid credentials" });
-
-      const match = await bcrypt.compare(password, candidate.password);
-      if (!match)
-        return res.status(400).json({ message: "Invalid credentials" });
-
-      const token = jwt.sign(
-        { candidate_id: candidate.candidate_id, role: "candidate" },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-
-      res.json({ token });
-    }
+  const candidate = await db.get(
+    "SELECT * FROM candidates WHERE email = ?",
+    [email]
   );
+
+  if (!candidate) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
+
+  const match = await bcrypt.compare(password, candidate.password);
+  if (!match) {
+    return res.status(400).json({ message: "Invalid credentials" });
+  }
+
+  const token = jwt.sign(
+    { candidate_id: candidate.candidate_id, role: "candidate" },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  res.json({ token });
 });
 
+/* =======================
+   VOTING
+======================= */
 
-// VOTING (SAFE & ATOMIC)
-
-app.post("/vote/:candidateId", authenticate, (req, res) => {
+app.post("/vote/:candidateId", authenticate, async (req, res) => {
   if (req.user.role !== "voter") {
     return res.status(403).json({ message: "Only voters can vote" });
   }
@@ -181,92 +178,80 @@ app.post("/vote/:candidateId", authenticate, (req, res) => {
   const voterId = req.user.voter_id;
   const candidateId = req.params.candidateId;
 
-
-  db.get(
+  const alreadyVoted = await db.get(
     "SELECT * FROM votes WHERE voter_id = ?",
-    [voterId],
-    (err, vote) => {
-      if (vote) {
-        return res.status(400).json({ message: "You already voted" });
-      }
-
-      db.run(
-        "INSERT INTO votes (voter_id, candidate_id) VALUES (?, ?)",
-        [voterId, candidateId],
-        () => {
-          
-          db.run(
-            "UPDATE candidates SET votes = votes + 1 WHERE candidate_id = ?",
-            [candidateId]
-          );
-
-          res.json({ message: "Vote cast successfully" });
-        }
-      );
-    }
+    [voterId]
   );
-});
 
-
-// VIEW CANDIDATES (VOTERS ONLY)
-
-app.get("/candidates", authenticate, (req, res) => {
-  if (req.user.role !== "voter")
-    return res.status(403).json({ message: "Only voters allowed" });
-
-  db.all(
-    `SELECT candidate_id, name, party, votes FROM candidates`,
-    [],
-    (err, rows) => {
-      res.json(rows);
-    }
-  );
-});
-
-
-// CANDIDATE VIEW OWN VOTES
-
-app.get(
-  "/candidates/me/votes",
-  authenticateCandidate,
-  (req, res) => {
-    const candidateId = req.user.candidate_id;
-
-    db.get(
-      `SELECT candidate_id, name, party, votes
-       FROM candidates
-       WHERE candidate_id = ?`,
-      [candidateId],
-      (err, candidate) => {
-        res.json(candidate);
-      }
-    );
+  if (alreadyVoted) {
+    return res.status(400).json({ message: "You already voted" });
   }
-);
 
+  await db.run(
+    "INSERT INTO votes (voter_id, candidate_id) VALUES (?, ?)",
+    [voterId, candidateId]
+  );
 
+  await db.run(
+    "UPDATE candidates SET votes = votes + 1 WHERE candidate_id = ?",
+    [candidateId]
+  );
 
-app.get("/admin/votes", authenticateAdmin, (req, res) => {
-  db.all(
-    `
+  res.json({ message: "Vote cast successfully" });
+});
+
+/* =======================
+   VIEW CANDIDATES (VOTER)
+======================= */
+
+app.get("/candidates", authenticate, async (req, res) => {
+  if (req.user.role !== "voter") {
+    return res.status(403).json({ message: "Only voters allowed" });
+  }
+
+  const candidates = await db.all(
+    "SELECT candidate_id, name, party, votes FROM candidates"
+  );
+
+  res.json(candidates);
+});
+
+/* =======================
+   CANDIDATE VIEW OWN VOTES
+======================= */
+
+app.get("/candidates/me/votes", authenticateCandidate, async (req, res) => {
+  const candidateId = req.user.candidate_id;
+
+  const candidate = await db.get(
+    "SELECT candidate_id, name, party, votes FROM candidates WHERE candidate_id = ?",
+    [candidateId]
+  );
+
+  res.json(candidate);
+});
+
+/* =======================
+   ADMIN VIEW ALL VOTES
+======================= */
+
+app.get("/admin/votes", authenticateAdmin, async (req, res) => {
+  const votes = await db.all(`
     SELECT
       voters.name AS voter,
       candidates.name AS candidate
     FROM votes
     JOIN voters ON votes.voter_id = voters.voter_id
     JOIN candidates ON votes.candidate_id = candidates.candidate_id
-    `,
-    [],
-    (err, rows) => res.json(rows)
-  );
+  `);
+
+  res.json(votes);
 });
 
+/* =======================
+   SERVER
+======================= */
 
-
-
-// SERVER START
-
-
-app.listen(3000, () =>
-  console.log("Server running on http://localhost:3000")
-);
+app.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
+});
