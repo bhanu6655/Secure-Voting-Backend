@@ -248,6 +248,18 @@ app.get("/admin/votes", authenticateAdmin, async (req, res) => {
   res.json(votes);
 });
 
+*/=============
+   Total votes
+==================*/
+      
+app.get("/votes/total", async (req, res) => {
+  const result = await db.get(
+    "SELECT COUNT(*) AS totalVotes FROM votes"
+  );
+
+  res.json({ totalVotes: result.totalVotes });
+});
+
 /* =======================
    SERVER
 ======================= */
