@@ -279,6 +279,27 @@ app.get("/votes/total", async (req, res) => {
   res.json({ totalVotes: result.totalVotes });
 });
 
+*/==============================
+Each candidate gets how many votes
+========================*/
+
+   app.get("/admin/candidates/votes", authenticateAdmin, async (req, res) => {
+  const result = await db.all(`
+    SELECT
+      c.candidate_id,
+      c.name,
+      c.party,
+      COUNT(v.vote_id) AS votes
+    FROM candidates c
+    LEFT JOIN votes v
+      ON c.candidate_id = v.candidate_id
+    GROUP BY c.candidate_id
+  `);
+
+  res.json(result);
+});
+
+
 /* =======================
    SERVER
 ======================= */
